@@ -12,9 +12,9 @@
 | Phase | Sprints | Focus | Status | Evidence |
 |---|---|---|---|---|
 | **P0 Foundation** | S1-S2 | Monorepo, DB, Auth skeleton, Health checks, Docker, CI | **Completed** | Commit `6e43d81`, 3/3 tests pass |
-| **P1 Thin Slice** | S3-S5 | VideoProvider adapter, direct upload, webhooks, player, social | **Completed** | Commit `d538e8e`, 5/5 tests pass |
-| **P2 AI Core** | S6-S8 | LLM Gateway, Scope Guard v1, chapters, summary, grounded RAG | **Completed** | 7/7 tests pass, frontend built |
-| **P3 Learning** | S9-S10 | Grounded RAG, FSRS flashcards, quizzes, debug-to-video | Ready for S10 | Full RAG pipeline tested |
+| **P1 Thin Slice** | S3-S5 | VideoProvider adapter, direct upload, webhooks, YouTube Feed, player, social | **Completed** | Commits `d538e8e`, `d726210`, 7/7 tests pass |
+| **P2 AI Core** | S6-S8 | LLM Gateway, Scope Guard v1, chapters, summary, grounded RAG | **Completed** | Tested live with citations |
+| **P3 Learning** | S9-S10 | Grounded RAG, FSRS flashcards, quizzes, debug-to-video | **In Progress** | RAG Assistant + Interactive Chapters active |
 | **P4 Creator & Growth** | S11-S14 | Creator Studio, retention analyzer, moderation | In Roadmap | — |
 | **P5 Production** | S15-S16 | Security hardening, load testing, disaster recovery | In Roadmap | — |
 
