@@ -37,6 +37,9 @@ async def get_upload_url(
         title=payload.title,
         description=payload.description,
         visibility=payload.visibility,
+        category=payload.category,
+        tags=payload.tags,
+        thumbnail_url=payload.thumbnail_url,
         status="uploading",
     )
     db.add(video)
@@ -101,10 +104,29 @@ async def provider_webhook(
     return {"status": "accepted", "event_id": event_id}
 
 @router.get("", response_model=list[VideoResponse])
-async def list_public_videos(db: AsyncSession = Depends(get_db)):
-    """List publicly visible ready videos."""
-    query = select(Video).where(Video.visibility == "public", Video.status == "ready").limit(50)
-    videos = (await db.execute(query)).scalars().all()
+async def list_public_videos(
+    category: str | None = None,
+    search: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """List publicly visible ready videos with optional category & search filter."""
+    query = (
+        select(Video, Channel)
+        .join(Channel, Video.channel_id == Channel.id)
+        .where(Video.visibility == "public", Video.status == "ready")
+    )
+    if category and category.lower() != "all":
+        query = query.where(Video.category == category)
+    if search:
+        search_pattern = f"%{search.lower()}%"
+        query = query.where(
+            (Video.title.ilike(search_pattern))
+            | (Video.description.ilike(search_pattern))
+            | (Video.tags.ilike(search_pattern))
+        )
+
+    query = query.order_by(Video.created_at.desc()).limit(50)
+    results = (await db.execute(query)).all()
     provider = get_video_provider()
 
     return [
@@ -117,8 +139,15 @@ async def list_public_videos(db: AsyncSession = Depends(get_db)):
             status=v.status,
             duration_seconds=v.duration_seconds,
             playback_url=provider.get_playback_url(v.provider_video_id) if v.provider_video_id else None,
+            thumbnail_url=v.thumbnail_url,
+            views_count=v.views_count,
+            category=v.category,
+            tags=v.tags,
+            channel_title=c.title,
+            channel_handle=c.handle,
+            channel_avatar=c.avatar_url,
         )
-        for v in videos
+        for v, c in results
     ]
 
 @router.get("/{video_id}", response_model=VideoResponse)
@@ -128,17 +157,27 @@ async def get_video(
     current_user: User | None = Depends(get_optional_current_user),
 ):
     """Retrieve video enforcing visibility & ownership authorization."""
-    video = (await db.execute(select(Video).where(Video.id == video_id))).scalar_one_or_none()
-    if not video:
+    query = (
+        select(Video, Channel)
+        .join(Channel, Video.channel_id == Channel.id)
+        .where(Video.id == video_id)
+    )
+    row = (await db.execute(query)).first()
+    if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Video not found")
+
+    video, channel = row
 
     # Authorization before data delivery
     if video.visibility == "private":
         if not current_user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
-        channel = (await db.execute(select(Channel).where(Channel.id == video.channel_id))).scalar_one_or_none()
-        if not channel or (channel.owner_id != current_user.id and current_user.role != "admin"):
+        if channel.owner_id != current_user.id and current_user.role != "admin":
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to private video")
+
+    # Increment views
+    video.views_count += 1
+    await db.commit()
 
     provider = get_video_provider()
     return VideoResponse(
@@ -150,6 +189,13 @@ async def get_video(
         status=video.status,
         duration_seconds=video.duration_seconds,
         playback_url=provider.get_playback_url(video.provider_video_id) if video.provider_video_id else None,
+        thumbnail_url=video.thumbnail_url,
+        views_count=video.views_count,
+        category=video.category,
+        tags=video.tags,
+        channel_title=channel.title,
+        channel_handle=channel.handle,
+        channel_avatar=channel.avatar_url,
     )
 
 @router.post("/{video_id}/comments", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)

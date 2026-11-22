@@ -44,7 +44,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Docker & Storage
+# Databases & Storage
+*.db
+*.sqlite3
 data/
 qdrant_storage/
 postgres_data/
