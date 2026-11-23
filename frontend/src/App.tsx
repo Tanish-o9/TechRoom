@@ -23,6 +23,7 @@ import {
   Layers,
   ArrowLeft,
   Trash2,
+  Check,
 } from "lucide-react";
 
 interface Video {
@@ -76,7 +77,78 @@ interface Comment {
   created_at: string;
 }
 
+interface CreatorChannel {
+  handle: string;
+  title: string;
+  avatar: string;
+  subscribers: string;
+  description: string;
+  category: string;
+}
+
 const CATEGORIES = ["All", "System Design", "DevOps", "Database", "Python", "Rust", "React"];
+
+const CREATOR_CHANNELS: CreatorChannel[] = [
+  {
+    handle: "systemdesign",
+    title: "System Design Decoded",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+    subscribers: "128K",
+    description: "Enterprise software architecture, scale, and distributed consensus.",
+    category: "System Design",
+  },
+  {
+    handle: "devops_pro",
+    title: "Cloud Native & DevOps",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+    subscribers: "94K",
+    description: "Containers, Kubernetes, Observability, and Linux internals.",
+    category: "DevOps",
+  },
+  {
+    handle: "backend_mastery",
+    title: "Modern Backend Engineering",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+    subscribers: "142K",
+    description: "Async Python, High performance APIs, PostgreSQL, and Celery.",
+    category: "Python",
+  },
+  {
+    handle: "react_architecture",
+    title: "React Architecture & Systems",
+    avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+    subscribers: "165K",
+    description: "Deep dive into React 19, server actions, concurrent rendering, and performance.",
+    category: "React",
+  },
+];
+
+const TOPIC_METADATA: Record<string, { desc: string; badge: string }> = {
+  "System Design": {
+    desc: "Distributed consensus, event-driven architectures, rate limiters, and microservice sagas.",
+    badge: "Scale & Consensus",
+  },
+  DevOps: {
+    desc: "Kubernetes debugging, zero-downtime blue/green pipelines, Docker containers, and Linux networking.",
+    badge: "Cloud Native",
+  },
+  Database: {
+    desc: "PostgreSQL indexing, EXPLAIN ANALYZE, ClickHouse columnar OLAP, and sharded partition tables.",
+    badge: "High Throughput",
+  },
+  Python: {
+    desc: "FastAPI async modular architectures, asyncio event loops, uvloop concurrency, and SQLAlchemy 2.0.",
+    badge: "Async Architecture",
+  },
+  Rust: {
+    desc: "Memory safety, zero-cost abstractions, Tokio concurrency, and building custom high-speed network protocols.",
+    badge: "Systems Programming",
+  },
+  React: {
+    desc: "React 19 Server Components, Actions, optimistic UI mutations, and enterprise Micro-Frontends.",
+    badge: "Component Architecture",
+  },
+};
 
 export default function App() {
   // Navigation & section views
@@ -87,13 +159,15 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [allVideos, setAllVideos] = useState<Video[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   // Persistent user state (Subscriptions, Saved, Liked, History)
   const [subscribedChannels, setSubscribedChannels] = useState<Set<string>>(() => {
     const saved = localStorage.getItem("techroom_subscribed");
-    return saved ? new Set(JSON.parse(saved)) : new Set(["systemdesign"]);
+    return saved ? new Set(JSON.parse(saved)) : new Set(["systemdesign", "react_architecture"]);
   });
   const [savedVideoIds, setSavedVideoIds] = useState<Set<string>>(() => {
     const saved = localStorage.getItem("techroom_saved");
@@ -124,17 +198,17 @@ export default function App() {
   const [comments, setComments] = useState<Comment[]>([
     {
       id: "c1",
-      username: "alice_dev",
-      content: "The transactional outbox explanation around 03:00 saved our distributed system from race conditions!",
+      username: "alex_architect",
+      content: "The transactional outbox pattern combined with Celery eliminates 100% of the distributed state races.",
       timestamp_seconds: 180,
-      created_at: "2 hours ago",
+      created_at: "1 hour ago",
     },
     {
       id: "c2",
       username: "dan_eng",
-      content: "Great breakdown of B-Trees vs LSM Trees. Highly recommended for system design rounds.",
+      content: "Great breakdown of B-Trees vs LSM Trees. Crucial for system design and live debugging rounds.",
       timestamp_seconds: 240,
-      created_at: "1 day ago",
+      created_at: "5 hours ago",
     },
   ]);
   const [newComment, setNewComment] = useState("");
@@ -160,7 +234,7 @@ export default function App() {
     localStorage.setItem("techroom_history", JSON.stringify(watchHistory));
   }, [watchHistory]);
 
-  // Fetch videos from backend
+  // Fetch full video catalogue & filtered subset
   const fetchVideos = async (cat: string = selectedCategory, search: string = searchQuery) => {
     setLoading(true);
     try {
@@ -171,6 +245,14 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setVideos(data);
+      }
+      // Also maintain allVideos for global library references
+      if (!allVideos.length || (!cat || cat === "All")) {
+        const allRes = await fetch("/api/v1/videos");
+        if (allRes.ok) {
+          const allData = await allRes.json();
+          setAllVideos(allData);
+        }
       }
     } catch {
       // fallback
@@ -197,11 +279,18 @@ export default function App() {
     setCurrentTime(0);
     setChatHistory([]);
 
-    // Record into genuine watch history
+    // Record into genuine watch history state
     setWatchHistory((prev) => {
       const filtered = prev.filter((item) => item.video.id !== video.id);
       return [{ video, watchedAt: "Just now" }, ...filtered];
     });
+
+    // Notify backend history recorder
+    try {
+      fetch(`/api/v1/videos/${video.id}/history`, { method: "POST" }).catch(() => {});
+    } catch {
+      // ignore
+    }
 
     // Fetch AI Summary & Chapters
     try {
@@ -258,6 +347,11 @@ export default function App() {
       else next.add(videoId);
       return next;
     });
+    try {
+      fetch(`/api/v1/videos/${videoId}/save`, { method: "POST" }).catch(() => {});
+    } catch {
+      // ignore
+    }
   };
 
   // Toggle liked
@@ -268,6 +362,20 @@ export default function App() {
       else next.add(videoId);
       return next;
     });
+    try {
+      fetch(`/api/v1/videos/${videoId}/like`, { method: "POST" }).catch(() => {});
+    } catch {
+      // ignore
+    }
+  };
+
+  // Share action
+  const handleShare = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
   };
 
   // RAG Ask
@@ -353,6 +461,7 @@ export default function App() {
     };
 
     setVideos([newVid, ...videos]);
+    setAllVideos([newVid, ...allVideos]);
     setUploadSuccess(true);
     setTimeout(() => {
       setUploadModalOpen(false);
@@ -373,19 +482,25 @@ export default function App() {
     return `${count} views`;
   };
 
+  // Pool of all candidate videos for rendering
+  const videoPool = allVideos.length ? allVideos : videos;
+
   // Determine current display list based on active sidebar section
   const getDisplayedVideos = () => {
     if (activeSection === "trending") {
-      return [...videos].sort((a, b) => b.views_count - a.views_count);
+      return [...videoPool].sort((a, b) => b.views_count - a.views_count);
     }
     if (activeSection === "subscriptions") {
-      return videos.filter((v) => v.channel_handle && subscribedChannels.has(v.channel_handle));
+      return videoPool.filter((v) => v.channel_handle && subscribedChannels.has(v.channel_handle));
     }
     if (activeSection === "saved") {
-      return videos.filter((v) => savedVideoIds.has(v.id));
+      return videoPool.filter((v) => savedVideoIds.has(v.id));
     }
     if (activeSection === "liked") {
-      return videos.filter((v) => likedVideoIds.has(v.id));
+      return videoPool.filter((v) => likedVideoIds.has(v.id));
+    }
+    if (activeSection === "topic") {
+      return videoPool.filter((v) => v.category === selectedCategory);
     }
     return videos;
   };
@@ -484,7 +599,7 @@ export default function App() {
 
       {/* Main Body Layout */}
       <div className="flex-1 flex overflow-hidden">
-        {/* 2. Left Sidebar (GENUINE WORKING LINKS) */}
+        {/* 2. Left Sidebar (GENUINE WORKING LINKS MATCHING SCREENSHOT) */}
         {sidebarOpen && (
           <aside className="w-56 shrink-0 bg-[#0f0f0f] border-r border-zinc-800/80 p-3 space-y-4 overflow-y-auto hidden md:block">
             <div className="space-y-1">
@@ -493,7 +608,9 @@ export default function App() {
                 onClick={() => {
                   setActiveSection("home");
                   setSelectedCategory("All");
+                  setSearchQuery("");
                   setView("feed");
+                  fetchVideos("All", "");
                 }}
                 className={`w-full flex items-center gap-4 px-3 py-2 rounded-xl text-xs font-medium transition ${
                   activeSection === "home" && view === "feed"
@@ -527,14 +644,21 @@ export default function App() {
                   setActiveSection("subscriptions");
                   setView("feed");
                 }}
-                className={`w-full flex items-center gap-4 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${
                   activeSection === "subscriptions" && view === "feed"
                     ? "bg-zinc-800 text-blue-400 font-semibold"
                     : "text-zinc-300 hover:bg-zinc-900"
                 }`}
               >
-                <Layers className="w-4 h-4 text-blue-400" />
-                <span>Subscriptions ({subscribedChannels.size})</span>
+                <div className="flex items-center gap-4">
+                  <Layers className="w-4 h-4 text-blue-400" />
+                  <span>Subscriptions</span>
+                </div>
+                {subscribedChannels.size > 0 && (
+                  <span className="text-[10px] font-mono text-zinc-400 bg-zinc-800/80 px-1.5 py-0.5 rounded">
+                    {subscribedChannels.size}
+                  </span>
+                )}
               </button>
             </div>
 
@@ -561,7 +685,7 @@ export default function App() {
                   <span>History</span>
                 </div>
                 {watchHistory.length > 0 && (
-                  <span className="text-[10px] font-mono text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] font-mono text-zinc-400 bg-zinc-800/80 px-1.5 py-0.5 rounded">
                     {watchHistory.length}
                   </span>
                 )}
@@ -584,7 +708,7 @@ export default function App() {
                   <span>Saved Tutorials</span>
                 </div>
                 {savedVideoIds.size > 0 && (
-                  <span className="text-[10px] font-mono text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] font-mono text-zinc-400 bg-zinc-800/80 px-1.5 py-0.5 rounded">
                     {savedVideoIds.size}
                   </span>
                 )}
@@ -607,7 +731,7 @@ export default function App() {
                   <span>Liked Videos</span>
                 </div>
                 {likedVideoIds.size > 0 && (
-                  <span className="text-[10px] font-mono text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] font-mono text-zinc-400 bg-zinc-800/80 px-1.5 py-0.5 rounded">
                     {likedVideoIds.size}
                   </span>
                 )}
@@ -626,6 +750,7 @@ export default function App() {
                     setActiveSection("topic");
                     setSelectedCategory(cat);
                     setView("feed");
+                    fetchVideos(cat, searchQuery);
                   }}
                   className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-xl text-xs transition ${
                     activeSection === "topic" && selectedCategory === cat
@@ -639,9 +764,10 @@ export default function App() {
               ))}
             </div>
 
+            {/* TECHROOM FOOTER */}
             <div className="border-t border-zinc-800/80 pt-3 px-3 text-[11px] text-zinc-500 space-y-1 font-mono">
               <p>TechRoom v2.0</p>
-              <p>Developer-Only Policy</p>
+              <p className="text-zinc-400">Developer-Only Policy</p>
               <p>© 2026 TechRoom Inc.</p>
             </div>
           </aside>
@@ -661,9 +787,11 @@ export default function App() {
                       onClick={() => {
                         setSelectedCategory(cat);
                         setActiveSection(cat === "All" ? "home" : "topic");
+                        fetchVideos(cat, searchQuery);
                       }}
                       className={`px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${
-                        selectedCategory === cat
+                        (activeSection === "home" && cat === "All" && selectedCategory === "All") ||
+                        (activeSection === "topic" && selectedCategory === cat)
                           ? "bg-white text-black font-semibold"
                           : "bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200"
                       }`}
@@ -674,7 +802,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* Context Banner based on Section */}
+              {/* SECTION CONTEXT BANNERS */}
               {activeSection === "home" && (
                 <div className="bg-gradient-to-r from-blue-950/40 via-zinc-900 to-zinc-900 border border-blue-900/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="space-y-1">
@@ -713,17 +841,54 @@ export default function App() {
               )}
 
               {activeSection === "subscriptions" && (
-                <div className="bg-gradient-to-r from-blue-950/40 via-zinc-900 to-zinc-900 border border-blue-900/30 rounded-2xl p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Layers className="w-6 h-6 text-blue-400" />
-                    <div>
-                      <h2 className="text-base font-bold text-white">Subscribed Channels Feed</h2>
-                      <p className="text-xs text-zinc-400">Tutorials from channels you follow.</p>
+                <div className="space-y-4">
+                  <div className="bg-gradient-to-r from-blue-950/40 via-zinc-900 to-zinc-900 border border-blue-900/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <Layers className="w-6 h-6 text-blue-400" />
+                      <div>
+                        <h2 className="text-base font-bold text-white">Subscribed Channels Feed</h2>
+                        <p className="text-xs text-zinc-400">Tutorials from creators you follow in real-time.</p>
+                      </div>
                     </div>
+                    <span className="text-xs font-mono text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">
+                      Following {subscribedChannels.size} creators
+                    </span>
                   </div>
-                  <span className="text-xs font-mono text-zinc-400">
-                    Following {subscribedChannels.size} creators
-                  </span>
+
+                  {/* Channel cards list */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {CREATOR_CHANNELS.map((ch) => {
+                      const isSub = subscribedChannels.has(ch.handle);
+                      return (
+                        <div
+                          key={ch.handle}
+                          className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-3.5 flex items-center justify-between gap-3"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <img
+                              src={ch.avatar}
+                              alt={ch.title}
+                              className="w-10 h-10 rounded-full object-cover ring-1 ring-zinc-700 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <h4 className="text-xs font-bold text-zinc-100 truncate">{ch.title}</h4>
+                              <p className="text-[11px] text-zinc-400 font-mono">@{ch.handle} · {ch.subscribers}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => toggleSubscribe(ch.handle)}
+                            className={`px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition ${
+                              isSub
+                                ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                                : "bg-red-600 text-white hover:bg-red-500"
+                            }`}
+                          >
+                            {isSub ? "Subscribed" : "Subscribe"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -749,22 +914,54 @@ export default function App() {
               )}
 
               {activeSection === "saved" && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center gap-3">
-                  <Bookmark className="w-6 h-6 text-zinc-400" />
-                  <div>
-                    <h2 className="text-base font-bold text-white">Saved Tutorials (Library)</h2>
-                    <p className="text-xs text-zinc-400">{savedVideoIds.size} saved videos for future reference.</p>
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Bookmark className="w-6 h-6 text-blue-400" />
+                    <div>
+                      <h2 className="text-base font-bold text-white">Saved Tutorials (Library)</h2>
+                      <p className="text-xs text-zinc-400">Personal technical bookmarks for code review and architecture lookup.</p>
+                    </div>
                   </div>
+                  <span className="text-xs font-mono text-zinc-400 bg-zinc-800 px-3 py-1 rounded-full">
+                    {savedVideoIds.size} saved
+                  </span>
                 </div>
               )}
 
               {activeSection === "liked" && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center gap-3">
-                  <ThumbsUp className="w-6 h-6 text-zinc-400" />
-                  <div>
-                    <h2 className="text-base font-bold text-white">Liked Videos</h2>
-                    <p className="text-xs text-zinc-400">{likedVideoIds.size} developer videos you liked.</p>
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <ThumbsUp className="w-6 h-6 text-blue-400" />
+                    <div>
+                      <h2 className="text-base font-bold text-white">Liked Videos</h2>
+                      <p className="text-xs text-zinc-400">Tutorials and system design sessions you found valuable.</p>
+                    </div>
                   </div>
+                  <span className="text-xs font-mono text-zinc-400 bg-zinc-800 px-3 py-1 rounded-full">
+                    {likedVideoIds.size} liked
+                  </span>
+                </div>
+              )}
+
+              {activeSection === "topic" && (
+                <div className="bg-gradient-to-r from-zinc-900 via-zinc-900 to-blue-950/30 border border-zinc-800 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="inline-flex items-center gap-2">
+                      <Code2 className="w-5 h-5 text-blue-400" />
+                      <h2 className="text-base sm:text-lg font-bold text-white">{selectedCategory} Engineering</h2>
+                      {TOPIC_METADATA[selectedCategory] && (
+                        <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                          {TOPIC_METADATA[selectedCategory].badge}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-zinc-400 max-w-xl">
+                      {TOPIC_METADATA[selectedCategory]?.desc || `In-depth technical breakdown and architecture sessions for ${selectedCategory}.`}
+                    </p>
+                  </div>
+                  <span className="text-xs font-mono text-zinc-400 bg-zinc-950 px-3 py-1.5 rounded-lg border border-zinc-800">
+                    {displayedVideos.length} Tutorials
+                  </span>
                 </div>
               )}
 
@@ -775,9 +972,9 @@ export default function App() {
                     <div
                       key={idx}
                       onClick={() => openVideo(item.video)}
-                      className="flex gap-4 p-3 bg-zinc-900/60 hover:bg-zinc-800/80 rounded-xl cursor-pointer border border-zinc-800 transition group"
+                      className="flex flex-col sm:flex-row gap-4 p-3 bg-zinc-900/60 hover:bg-zinc-800/80 rounded-xl cursor-pointer border border-zinc-800 transition group"
                     >
-                      <div className="relative w-44 aspect-video rounded-lg overflow-hidden bg-zinc-950 shrink-0">
+                      <div className="relative w-full sm:w-48 aspect-video rounded-lg overflow-hidden bg-zinc-950 shrink-0">
                         <img
                           src={item.video.thumbnail_url}
                           alt={item.video.title}
@@ -787,7 +984,7 @@ export default function App() {
                           {formatTime(item.video.duration_seconds)}
                         </span>
                       </div>
-                      <div className="flex-1 space-y-1">
+                      <div className="flex-1 space-y-1 min-w-0">
                         <h4 className="text-sm font-semibold text-white group-hover:text-blue-400 transition line-clamp-1">
                           {item.video.title}
                         </h4>
@@ -808,7 +1005,7 @@ export default function App() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-y-7 gap-x-4">
-                  {displayedVideos.map((vid) => (
+                  {displayedVideos.map((vid, idx) => (
                     <div
                       key={vid.id}
                       onClick={() => openVideo(vid)}
@@ -824,6 +1021,11 @@ export default function App() {
                           alt={vid.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                         />
+                        {activeSection === "trending" && (
+                          <span className="absolute top-2 right-2 bg-amber-500/90 text-black text-[10px] font-bold px-2 py-0.5 rounded shadow">
+                            #{idx + 1} Trending
+                          </span>
+                        )}
                         <span className="absolute bottom-2 right-2 bg-black/80 backdrop-blur text-white text-[11px] font-mono font-medium px-2 py-0.5 rounded">
                           {formatTime(vid.duration_seconds)}
                         </span>
@@ -843,7 +1045,7 @@ export default function App() {
                           alt={vid.channel_title || "Channel"}
                           className="w-9 h-9 rounded-full object-cover ring-1 ring-zinc-700 shrink-0 mt-0.5"
                         />
-                        <div className="flex-1 space-y-1">
+                        <div className="flex-1 space-y-1 min-w-0">
                           <h3 className="text-sm font-semibold text-zinc-100 line-clamp-2 leading-snug group-hover:text-blue-400 transition">
                             {vid.title}
                           </h3>
@@ -873,7 +1075,7 @@ export default function App() {
                       ? "No saved tutorials in your library."
                       : activeSection === "liked"
                       ? "No liked videos yet."
-                      : "No developer videos match your filter."}
+                      : `No developer videos currently found for ${selectedCategory}.`}
                   </p>
                   <button
                     onClick={() => {
@@ -882,9 +1084,9 @@ export default function App() {
                       setSearchQuery("");
                       fetchVideos("All", "");
                     }}
-                    className="px-4 py-1.5 rounded-lg bg-zinc-800 text-xs text-zinc-200 hover:bg-zinc-700"
+                    className="px-4 py-1.5 rounded-lg bg-zinc-800 text-xs text-zinc-200 hover:bg-zinc-700 transition"
                   >
-                    Browse All Videos
+                    Browse All Tutorials
                   </button>
                 </div>
               )}
@@ -978,11 +1180,11 @@ export default function App() {
                     </div>
 
                     <button
-                      onClick={() => alert("Video tutorial link copied to clipboard!")}
+                      onClick={handleShare}
                       className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-zinc-800/90 hover:bg-zinc-700 text-xs font-medium text-zinc-200 transition"
                     >
-                      <Share2 className="w-3.5 h-3.5" />
-                      <span>Share</span>
+                      {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
+                      <span>{copiedLink ? "Copied!" : "Share"}</span>
                     </button>
 
                     <button
@@ -1207,7 +1409,7 @@ export default function App() {
                 </div>
 
                 <div className="space-y-3">
-                  {videos
+                  {videoPool
                     .filter((v) => v.id !== activeVideo.id)
                     .map((rec) => (
                       <div
@@ -1228,7 +1430,7 @@ export default function App() {
                             {formatTime(rec.duration_seconds)}
                           </span>
                         </div>
-                        <div className="flex-1 space-y-1">
+                        <div className="flex-1 space-y-1 min-w-0">
                           <h4 className="text-xs font-semibold text-zinc-100 line-clamp-2 leading-tight group-hover:text-blue-400 transition">
                             {rec.title}
                           </h4>

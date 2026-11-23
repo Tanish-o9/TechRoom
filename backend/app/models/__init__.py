@@ -1,5 +1,17 @@
 from app.models.ai import LLMCall, ScopeCheck, TranscriptChunk, VideoChapter, VideoSummary
 from app.models.base import BaseModel
+from app.models.engineering import (
+    Challenge,
+    ChallengeSubmission,
+    EngineeringRoom,
+    Mission,
+    MissionProgress,
+    PersonalMemory,
+    Project,
+    RoomMessage,
+    SkillEvidence,
+    SystemCaseStudy,
+)
 from app.models.outbox import IdempotencyKey, OutboxEvent, ProviderEvent
 from app.models.social import ChannelSubscription, Comment, SavedVideo, VideoReaction, WatchHistory
 from app.models.user import User
@@ -23,4 +35,14 @@ __all__ = [
     "VideoSummary",
     "ScopeCheck",
     "LLMCall",
+    "Mission",
+    "MissionProgress",
+    "Challenge",
+    "ChallengeSubmission",
+    "Project",
+    "EngineeringRoom",
+    "RoomMessage",
+    "SystemCaseStudy",
+    "SkillEvidence",
+    "PersonalMemory",
 ]
