@@ -77,6 +77,22 @@ async def test_channel_and_video_lifecycle(client):
     assert like_res.status_code == 200
     assert like_res.json()["liked"] is True
 
+    # 8. List comments
+    cm_list = await client.get(f"/api/v1/videos/{video_id}/comments")
+    assert cm_list.status_code == 200
+    assert len(cm_list.json()) == 1
+
+    # 9. Search and category filter
+    search_res = await client.get("/api/v1/videos?search=Queues")
+    assert search_res.status_code == 200
+    assert len(search_res.json()) >= 1
+    assert search_res.json()[0]["id"] == video_id
+
+    # 10. Empty search on nonexistent term
+    none_res = await client.get("/api/v1/videos?search=NonExistentKeywordXYZ")
+    assert none_res.status_code == 200
+    assert len(none_res.json()) == 0
+
 @pytest.mark.asyncio
 async def test_unauthorized_channel_upload_rejected(client):
     # Register developer A
