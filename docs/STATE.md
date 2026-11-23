@@ -32,4 +32,8 @@
 - [x] Docker Compose definition (Postgres 16, Redis 7, Qdrant, API, Celery worker)
 - [x] CI pipeline (`.github/workflows/ci.yml`)
 - [x] Frontend React + Vite + TypeScript + Tailwind built cleanly (`npm run build` passed)
-- [x] Backend test suite passed (`pytest -v`: 2 passed in 0.07s)
+- [x] Backend test suite passed (`pytest -v`: 7 passed in 7.35s)
+- [x] YouTube-style Feed layout, top navigation, search, and category pills
+- [x] Genuine functional sidebar: Home, Trending Architecture, Subscriptions, History, Saved Tutorials (Library), Liked Videos, and Explore Topics
+- [x] Real HTML5 video playback with native controls and AI chapter synchronization
+- [x] All commits pushed and synced to GitHub remote `main` (https://github.com/Tanish-o9/TechRoom)
