@@ -34,7 +34,15 @@ class MockVideoProvider(VideoProvider):
         return signature_header == "valid_mock_signature"
 
     def get_playback_url(self, provider_video_id: str) -> str:
-        return f"https://customer-m0.cloudflarestream.com/{provider_video_id}/manifest/video.m3u8"
+        # High reliability HTML5 video stream for genuine local playback
+        streams = [
+            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+        ]
+        # Hash provider_video_id to deterministically select a sample
+        idx = abs(hash(provider_video_id)) % len(streams)
+        return streams[idx]
 
 class CloudflareStreamProvider(VideoProvider):
     """Production Cloudflare Stream implementation."""

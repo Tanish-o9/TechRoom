@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_optional_current_user
 from app.core.database import get_db
 from app.models.outbox import OutboxEvent, ProviderEvent
-from app.models.social import Comment, VideoReaction
+from app.models.social import ChannelSubscription, Comment, SavedVideo, VideoReaction, WatchHistory
 from app.models.user import User
 from app.models.video import Channel, Video
 from app.schemas.video import (
@@ -149,6 +149,216 @@ async def list_public_videos(
         )
         for v, c in results
     ]
+
+@router.get("/trending", response_model=list[VideoResponse])
+async def list_trending_videos(db: AsyncSession = Depends(get_db)):
+    """List trending architecture & developer videos sorted by popularity."""
+    query = (
+        select(Video, Channel)
+        .join(Channel, Video.channel_id == Channel.id)
+        .where(Video.visibility == "public", Video.status == "ready")
+        .order_by(Video.views_count.desc())
+        .limit(30)
+    )
+    results = (await db.execute(query)).all()
+    provider = get_video_provider()
+    return [
+        VideoResponse(
+            id=v.id,
+            channel_id=v.channel_id,
+            title=v.title,
+            description=v.description,
+            visibility=v.visibility,
+            status=v.status,
+            duration_seconds=v.duration_seconds,
+            playback_url=provider.get_playback_url(v.provider_video_id) if v.provider_video_id else None,
+            thumbnail_url=v.thumbnail_url,
+            views_count=v.views_count,
+            category=v.category,
+            tags=v.tags,
+            channel_title=c.title,
+            channel_handle=c.handle,
+            channel_avatar=c.avatar_url,
+        )
+        for v, c in results
+    ]
+
+@router.get("/saved", response_model=list[VideoResponse])
+async def list_saved_videos(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List saved tutorials for library."""
+    query = (
+        select(Video, Channel)
+        .join(SavedVideo, SavedVideo.video_id == Video.id)
+        .join(Channel, Video.channel_id == Channel.id)
+        .where(SavedVideo.user_id == current_user.id)
+        .order_by(SavedVideo.created_at.desc())
+    )
+    results = (await db.execute(query)).all()
+    provider = get_video_provider()
+    return [
+        VideoResponse(
+            id=v.id,
+            channel_id=v.channel_id,
+            title=v.title,
+            description=v.description,
+            visibility=v.visibility,
+            status=v.status,
+            duration_seconds=v.duration_seconds,
+            playback_url=provider.get_playback_url(v.provider_video_id) if v.provider_video_id else None,
+            thumbnail_url=v.thumbnail_url,
+            views_count=v.views_count,
+            category=v.category,
+            tags=v.tags,
+            channel_title=c.title,
+            channel_handle=c.handle,
+            channel_avatar=c.avatar_url,
+        )
+        for v, c in results
+    ]
+
+@router.get("/history", response_model=list[VideoResponse])
+async def list_watch_history(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List watch history for current user."""
+    query = (
+        select(Video, Channel)
+        .join(WatchHistory, WatchHistory.video_id == Video.id)
+        .join(Channel, Video.channel_id == Channel.id)
+        .where(WatchHistory.user_id == current_user.id)
+        .order_by(WatchHistory.created_at.desc())
+        .limit(50)
+    )
+    results = (await db.execute(query)).all()
+    provider = get_video_provider()
+    return [
+        VideoResponse(
+            id=v.id,
+            channel_id=v.channel_id,
+            title=v.title,
+            description=v.description,
+            visibility=v.visibility,
+            status=v.status,
+            duration_seconds=v.duration_seconds,
+            playback_url=provider.get_playback_url(v.provider_video_id) if v.provider_video_id else None,
+            thumbnail_url=v.thumbnail_url,
+            views_count=v.views_count,
+            category=v.category,
+            tags=v.tags,
+            channel_title=c.title,
+            channel_handle=c.handle,
+            channel_avatar=c.avatar_url,
+        )
+        for v, c in results
+    ]
+
+@router.delete("/history", status_code=status.HTTP_200_OK)
+async def clear_watch_history(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Clear all watch history for current user."""
+    from sqlalchemy import delete
+    await db.execute(delete(WatchHistory).where(WatchHistory.user_id == current_user.id))
+    await db.commit()
+    return {"status": "cleared"}
+
+@router.get("/liked", response_model=list[VideoResponse])
+async def list_liked_videos(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List liked videos for current user."""
+    query = (
+        select(Video, Channel)
+        .join(VideoReaction, VideoReaction.video_id == Video.id)
+        .join(Channel, Video.channel_id == Channel.id)
+        .where(VideoReaction.user_id == current_user.id, VideoReaction.reaction_type == "like")
+        .order_by(VideoReaction.created_at.desc())
+    )
+    results = (await db.execute(query)).all()
+    provider = get_video_provider()
+    return [
+        VideoResponse(
+            id=v.id,
+            channel_id=v.channel_id,
+            title=v.title,
+            description=v.description,
+            visibility=v.visibility,
+            status=v.status,
+            duration_seconds=v.duration_seconds,
+            playback_url=provider.get_playback_url(v.provider_video_id) if v.provider_video_id else None,
+            thumbnail_url=v.thumbnail_url,
+            views_count=v.views_count,
+            category=v.category,
+            tags=v.tags,
+            channel_title=c.title,
+            channel_handle=c.handle,
+            channel_avatar=c.avatar_url,
+        )
+        for v, c in results
+    ]
+
+@router.post("/{video_id}/save", status_code=status.HTTP_200_OK)
+async def toggle_save_video(
+    video_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Toggle saving a video into library/saved list."""
+    existing = (
+        await db.execute(
+            select(SavedVideo).where(
+                SavedVideo.video_id == video_id,
+                SavedVideo.user_id == current_user.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing:
+        await db.delete(existing)
+        await db.commit()
+        return {"saved": False}
+    db.add(SavedVideo(video_id=video_id, user_id=current_user.id))
+    await db.commit()
+    return {"saved": True}
+
+@router.post("/{video_id}/history", status_code=status.HTTP_200_OK)
+async def record_watch_history(
+    video_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Record an item into user watch history."""
+    db.add(WatchHistory(video_id=video_id, user_id=current_user.id))
+    await db.commit()
+    return {"status": "recorded"}
+
+@router.post("/channels/{channel_id}/subscribe", status_code=status.HTTP_200_OK)
+async def toggle_channel_subscription(
+    channel_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Toggle subscribing to a developer creator channel."""
+    existing = (
+        await db.execute(
+            select(ChannelSubscription).where(
+                ChannelSubscription.channel_id == channel_id,
+                ChannelSubscription.subscriber_id == current_user.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing:
+        await db.delete(existing)
+        await db.commit()
+        return {"subscribed": False}
+    db.add(ChannelSubscription(channel_id=channel_id, subscriber_id=current_user.id))
+    await db.commit()
+    return {"subscribed": True}
 
 @router.get("/{video_id}", response_model=VideoResponse)
 async def get_video(

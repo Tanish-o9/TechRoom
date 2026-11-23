@@ -27,3 +27,18 @@ class ChannelSubscription(BaseModel):
 
     channel_id: Mapped[str] = mapped_column(ForeignKey("channels.id", ondelete="CASCADE"), index=True)
     subscriber_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+
+class WatchHistory(BaseModel):
+    """User video watch history."""
+    __tablename__ = "watch_history"
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    video_id: Mapped[str] = mapped_column(ForeignKey("videos.id", ondelete="CASCADE"), index=True)
+
+class SavedVideo(BaseModel):
+    """Saved developer tutorials (Library/Watch Later)."""
+    __tablename__ = "saved_videos"
+    __table_args__ = (UniqueConstraint("user_id", "video_id", name="uq_user_saved_video"),)
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    video_id: Mapped[str] = mapped_column(ForeignKey("videos.id", ondelete="CASCADE"), index=True)

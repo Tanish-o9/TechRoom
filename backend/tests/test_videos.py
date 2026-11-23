@@ -61,7 +61,7 @@ async def test_channel_and_video_lifecycle(client):
     assert get_res.status_code == 200
     assert get_res.json()["status"] == "ready"
     assert get_res.json()["duration_seconds"] == 420
-    assert "manifest/video.m3u8" in get_res.json()["playback_url"]
+    assert get_res.json()["playback_url"].startswith("http")
 
     # 6. Add timestamped developer comment
     comment_res = await client.post(
@@ -92,6 +92,31 @@ async def test_channel_and_video_lifecycle(client):
     none_res = await client.get("/api/v1/videos?search=NonExistentKeywordXYZ")
     assert none_res.status_code == 200
     assert len(none_res.json()) == 0
+
+    # 11. Trending videos
+    trend_res = await client.get("/api/v1/videos/trending")
+    assert trend_res.status_code == 200
+    assert len(trend_res.json()) >= 1
+
+    # 12. Save video to library
+    save_res = await client.post(f"/api/v1/videos/{video_id}/save", headers=auth_headers)
+    assert save_res.status_code == 200
+    assert save_res.json()["saved"] is True
+    saved_list = await client.get("/api/v1/videos/saved", headers=auth_headers)
+    assert saved_list.status_code == 200
+    assert len(saved_list.json()) == 1
+
+    # 13. Record and fetch watch history
+    hist_post = await client.post(f"/api/v1/videos/{video_id}/history", headers=auth_headers)
+    assert hist_post.status_code == 200
+    hist_list = await client.get("/api/v1/videos/history", headers=auth_headers)
+    assert hist_list.status_code == 200
+    assert len(hist_list.json()) == 1
+
+    # 14. Subscribe to channel
+    sub_res = await client.post(f"/api/v1/videos/channels/{channel_id}/subscribe", headers=auth_headers)
+    assert sub_res.status_code == 200
+    assert sub_res.json()["subscribed"] is True
 
 @pytest.mark.asyncio
 async def test_unauthorized_channel_upload_rejected(client):
