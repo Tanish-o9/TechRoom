@@ -15,6 +15,8 @@ async def db_session():
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     async with TestingSessionLocal() as session:
+        from app.core.seed import seed_initial_data
+        await seed_initial_data(session)
         yield session
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
