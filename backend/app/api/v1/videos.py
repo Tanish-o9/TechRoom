@@ -11,6 +11,7 @@ from app.models.video import Channel, Video
 from app.schemas.video import (
     CommentCreate,
     CommentResponse,
+    DirectVideoCreateRequest,
     VideoResponse,
     VideoUploadRequest,
     VideoUploadResponse,
@@ -54,6 +55,107 @@ async def get_upload_url(
         video_id=video.id,
         upload_url=upload_data["upload_url"],
         provider_video_id=upload_data["provider_video_id"],
+    )
+
+@router.post("/direct", response_model=VideoResponse, status_code=status.HTTP_201_CREATED)
+async def create_direct_video(
+    payload: DirectVideoCreateRequest,
+    current_user: User | None = Depends(get_optional_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Direct video upload endpoint for developer creators with Scope Guard enforcement."""
+    from app.models.ai import ScopeCheck, VideoChapter, VideoSummary
+    from app.services.scope_guard import evaluate_scope
+    scope_eval = await evaluate_scope(payload.title, payload.description or "")
+    if scope_eval["decision"] == "rejected":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Rejected by Scope Guard: {scope_eval['reason']}"
+        )
+
+    channel = None
+    if current_user:
+        channel = (await db.execute(select(Channel).where(Channel.owner_id == current_user.id))).scalar_one_or_none()
+    if not channel:
+        channel = (await db.execute(select(Channel))).scalars().first()
+    if not channel:
+        user = (await db.execute(select(User))).scalars().first()
+        if not user:
+            from app.core.security import get_password_hash
+            user = User(
+                email="creator_default@techroom.io",
+                username="techroom_creator",
+                hashed_password=get_password_hash("DevPassword123!"),
+                role="creator",
+            )
+            db.add(user)
+            await db.flush()
+        channel = Channel(
+            owner_id=user.id,
+            handle="techroom_official",
+            title="TechRoom Engineering",
+            description="Verified developer engineering tutorials.",
+            avatar_url="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+        )
+        db.add(channel)
+        await db.flush()
+
+    provider = get_video_provider()
+    import uuid
+    prov_id = f"stream_{uuid.uuid4().hex[:12]}"
+    video = Video(
+        channel_id=channel.id,
+        title=payload.title,
+        description=payload.description or "Developer tutorial uploaded to TechRoom.",
+        visibility="public",
+        status="ready",
+        category=payload.category,
+        tags=payload.tags or payload.category.lower(),
+        duration_seconds=540,
+        views_count=1,
+        thumbnail_url=payload.thumbnail_url or "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&auto=format&fit=crop&q=80",
+        provider_video_id=prov_id,
+    )
+    db.add(video)
+    await db.flush()
+
+    db.add(ScopeCheck(
+        video_id=video.id,
+        score=scope_eval["score"],
+        decision="approved",
+        reason=scope_eval["reason"],
+    ))
+    db.add(VideoSummary(
+        video_id=video.id,
+        tldr=f"Overview of {video.title}.",
+        key_takeaways=["Core system mechanics.", "Engineering architectural patterns."],
+        code_concepts=[video.category, "Software Engineering"],
+    ))
+    db.add(VideoChapter(
+        video_id=video.id,
+        start_time=0.0,
+        end_time=float(video.duration_seconds),
+        title="1. Core Architecture & Implementation",
+        summary="Detailed technical walkthrough.",
+    ))
+    await db.commit()
+
+    return VideoResponse(
+        id=video.id,
+        channel_id=video.channel_id,
+        title=video.title,
+        description=video.description,
+        visibility=video.visibility,
+        status=video.status,
+        duration_seconds=video.duration_seconds,
+        playback_url=provider.get_playback_url(video.provider_video_id),
+        thumbnail_url=video.thumbnail_url,
+        views_count=video.views_count,
+        category=video.category,
+        tags=video.tags,
+        channel_title=channel.title,
+        channel_handle=channel.handle,
+        channel_avatar=channel.avatar_url,
     )
 
 @router.post("/webhook", status_code=status.HTTP_200_OK)

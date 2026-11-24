@@ -15,6 +15,17 @@ class AskQuestionRequest(BaseModel):
     question: str
     current_timestamp: float | None = None
 
+class ScopeCheckRequest(BaseModel):
+    title: str
+    description: str = ""
+    category: str = "System Design"
+
+@router.post("/scope-check", status_code=status.HTTP_200_OK)
+async def check_scope(payload: ScopeCheckRequest):
+    """Standalone Scope Guard evaluation for uploaded tutorials."""
+    eval_result = await evaluate_scope(payload.title, payload.description)
+    return eval_result
+
 @router.post("/process/{video_id}", status_code=status.HTTP_200_OK)
 async def process_video_ai_assets(video_id: str, db: AsyncSession = Depends(get_db)):
     """Eager AI processing: Scope Guard check, transcript chunks, summary, and chapters."""

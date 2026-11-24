@@ -24,6 +24,13 @@ class VideoUploadRequest(BaseModel):
     tags: str | None = None
     thumbnail_url: str | None = None
 
+class DirectVideoCreateRequest(BaseModel):
+    title: str = Field(min_length=3, max_length=255)
+    description: str | None = None
+    category: str = "System Design"
+    tags: str | None = None
+    thumbnail_url: str | None = None
+
 class VideoUploadResponse(BaseModel):
     video_id: str
     upload_url: str

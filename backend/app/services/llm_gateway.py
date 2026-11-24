@@ -75,7 +75,11 @@ class LLMGateway:
         """Deterministic, grounded responses for tests & structured outputs."""
         if task == "scope_guard":
             # Rule & semantic check for developer keywords
-            dev_keywords = ["python", "docker", "redis", "celery", "api", "database", "rust", "code", "architecture", "query"]
+            dev_keywords = [
+                "python", "docker", "redis", "celery", "api", "database", "rust", "code", "architecture",
+                "query", "linux", "ebpf", "kernel", "devops", "network", "react", "typescript", "software",
+                "engineering", "distributed", "grpc", "security", "concurrency", "system", "backend", "frontend",
+            ]
             has_dev_term = any(k in user_prompt.lower() for k in dev_keywords)
             return {
                 "score": 0.95 if has_dev_term else 0.20,
