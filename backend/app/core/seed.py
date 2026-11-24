@@ -3,6 +3,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_password_hash
 from app.models.ai import ScopeCheck, TranscriptChunk, VideoChapter, VideoSummary
+from app.models.engineering import (
+    Challenge,
+    EngineeringRoom,
+    Mission,
+    PersonalMemory,
+    Project,
+    RoomMessage,
+    SkillEvidence,
+)
 from app.models.user import User
 from app.models.video import Channel, Video
 
@@ -335,5 +344,160 @@ async def seed_initial_data(db: AsyncSession) -> None:
             end_time=float((v.duration_seconds * 2) // 3),
             text="Notice how the transactional boundaries isolate failures and avoid corrupting state.",
         ))
+
+    # 4. Seed Engineering Missions
+    has_mission = (await db.execute(select(Mission))).scalars().first()
+    if not has_mission:
+        m1 = Mission(
+            title="Distributed Raft Consensus Engine",
+            domain="System Design",
+            difficulty="Advanced",
+            description="Build a distributed replicated state machine implementing Raft consensus: leader election, log compaction, RPC heartbeats, and network partition recovery.",
+            estimated_hours=14,
+            stages=[
+                {
+                    "name": "Milestone 1: Heartbeats & Randomized Election Timers",
+                    "tasks": [
+                        {"id": "t1", "title": "Randomized Election Timer (150ms-300ms jitter)", "completed": True},
+                        {"id": "t2", "title": "Candidate RequestVote RPC with Term Invariant", "completed": True},
+                        {"id": "t3", "title": "Leader Heartbeat Broadcast & Follower Reset", "completed": True},
+                    ]
+                },
+                {
+                    "name": "Milestone 2: AppendEntries RPC & Log Matching Invariant",
+                    "tasks": [
+                        {"id": "t4", "title": "WAL Disk Persistence with O_DIRECT / fsync", "completed": True},
+                        {"id": "t5", "title": "Log Index Conflict Truncation", "completed": True},
+                        {"id": "t6", "title": "Leader Commit Index Advancement via Quorum", "completed": False},
+                    ]
+                },
+                {
+                    "name": "Milestone 3: Quorum Commit & State Machine Safety",
+                    "tasks": [
+                        {"id": "t7", "title": "Atomic Apply to In-Memory Key-Value State Machine", "completed": False},
+                        {"id": "t8", "title": "Linearizable Read Lease Implementation", "completed": False},
+                    ]
+                }
+            ],
+        )
+        m2 = Mission(
+            title="Log-Structured Merge (LSM) Storage Engine",
+            domain="Database",
+            difficulty="Advanced",
+            description="Design an embedded key-value storage engine modeled after RocksDB and BadgerDB with MemTable skiplist, SSTables, and Bloom filters.",
+            estimated_hours=18,
+            stages=[
+                {
+                    "name": "Milestone 1: MemTable Skiplist & Concurrent Write Buffer",
+                    "tasks": [
+                        {"id": "t9", "title": "Lock-Free Concurrent Skiplist Implementation", "completed": True},
+                        {"id": "t10", "title": "WAL Replay and Crash Recovery", "completed": True},
+                    ]
+                },
+                {
+                    "name": "Milestone 2: SSTable Immutable Flush & Binary Block Encoding",
+                    "tasks": [
+                        {"id": "t11", "title": "Two-Pass Block Compression (Snappy/Zstd)", "completed": False},
+                        {"id": "t12", "title": "Binary Block Index & Sparse Key Pointers", "completed": False},
+                    ]
+                },
+            ],
+        )
+        db.add_all([m1, m2])
+
+    # 5. Seed Engineering Challenges (Break My Code)
+    has_challenge = (await db.execute(select(Challenge))).scalars().first()
+    if not has_challenge:
+        c1 = Challenge(
+            title="Sliding Window Rate Limiter Over-Counting Bug",
+            category="Algorithms",
+            difficulty="Medium",
+            language="python",
+            description="Fix the rate limiter logic so that timestamps outside the rolling time window are properly evicted before checking capacity.",
+            broken_code=(
+                "def is_rate_limited(timestamps: list[int], window_sec: int, max_reqs: int, current_ts: int) -> bool:\n"
+                "    # BUG: Fails to filter out expired requests outside current window\n"
+                "    return len(timestamps) >= max_reqs\n"
+            ),
+            test_cases=[
+                {"test": "is_rate_limited([10, 20, 30], 10, 2, 35) == False", "description": "Prunes expired requests outside 10s window"},
+                {"test": "is_rate_limited([31, 32, 33], 10, 2, 35) == True", "description": "Detects capacity exceeded in window"},
+                {"test": "is_rate_limited([], 10, 1, 35) == False", "description": "Allows first request on empty buffer"},
+            ],
+            solution_code=(
+                "def is_rate_limited(timestamps: list[int], window_sec: int, max_reqs: int, current_ts: int) -> bool:\n"
+                "    active = [t for t in timestamps if t >= (current_ts - window_sec)]\n"
+                "    return len(active) >= max_reqs\n"
+            ),
+        )
+        db.add(c1)
+
+    # 6. Seed Projects & Live Collaborative Rooms
+    has_room = (await db.execute(select(EngineeringRoom))).scalars().first()
+    if not has_room:
+        first_user = (await db.execute(select(User))).scalars().first()
+        uid = first_user.id if first_user else "default_dev_user"
+        r1 = EngineeringRoom(
+            host_id=uid,
+            title="Raft Log Compaction & Snapshotting Working Group",
+            topic="Distributed Systems",
+            is_live=True,
+            shared_code="# Live Collaborative Workspace — Raft Log Compaction\n\ndef install_snapshot(term: int, snapshot_data: bytes):\n    # Synchronize state machine directly from snapshot\n    pass\n",
+            shared_notes="## Working Group Notes\n- Compacting logs before index 1000\n- Preserving last_included_term in metadata header\n",
+        )
+        r2 = EngineeringRoom(
+            host_id=uid,
+            title="FastAPI Async Connection Pooling Benchmark & Debug",
+            topic="Python Architecture",
+            is_live=True,
+            shared_code="# Async Connection Pool Benchmark\nimport asyncio\n\nasync def test_pool():\n    pass\n",
+            shared_notes="## Benchmark Targets\n- 500 concurrent connections\n- Keep pool size at 20, overflow at 10\n",
+        )
+        db.add_all([r1, r2])
+        await db.flush()
+
+        msg = RoomMessage(room_id=r1.id, user_name="alex_xu", message="Welcome to the working group. Inspect line 4 for state machine snapshotting.")
+        db.add(msg)
+
+        p1 = Project(
+            user_id=uid,
+            name="TechRoom High-Throughput Core Architecture",
+            repo_url="https://github.com/Tanish-o9/TechRoom",
+            description="Production microservice topology with Envoy edge gateway, FastAPI async worker pool, and Redis cluster.",
+            tech_stack=["FastAPI", "PostgreSQL", "Redis", "Celery", "React", "TypeScript"],
+            architecture_map={"layers": ["ingress", "service", "cache", "database", "worker"]},
+        )
+        db.add(p1)
+
+        # 7. Seed Skill Evidence
+        ev1 = SkillEvidence(
+            user_id=uid,
+            skill_name="Distributed Systems & Consensus",
+            level="Expert",
+            score=96,
+            evidence_type="Mission: Distributed Raft Consensus Engine (Quorum Proof)",
+        )
+        ev2 = SkillEvidence(
+            user_id=uid,
+            skill_name="High-Throughput PostgreSQL Indexing",
+            level="Advanced",
+            score=92,
+            evidence_type="Challenge: EXPLAIN ANALYZE B-Tree/GIN Tuning",
+        )
+        ev3 = SkillEvidence(
+            user_id=uid,
+            skill_name="Async Microservices Architecture",
+            level="Advanced",
+            score=89,
+            evidence_type="Challenge: Celery Transactional Outbox Pattern",
+        )
+        mem1 = PersonalMemory(
+            user_id=uid,
+            title="Raft Log Compaction Invariants",
+            category="Decision",
+            content="Always retain last_included_index and last_included_term in metadata header to allow stale followers to catch up.",
+            tags=["consensus", "raft", "storage"],
+        )
+        db.add_all([ev1, ev2, ev3, mem1])
 
     await db.commit()
