@@ -38,11 +38,22 @@ export const RoomsView: React.FC = () => {
   ]);
   const [msgInput, setMsgInput] = useState("");
 
-  const handleSendChat = (e: React.FormEvent) => {
+  const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!msgInput.trim()) return;
-    setChatLog([...chatLog, { user: "tanish_dev", text: msgInput }]);
+    const text = msgInput;
     setMsgInput("");
+    setChatLog((prev) => [...prev, { user: "tanish_dev", text }]);
+
+    try {
+      await fetch(`/api/v1/engineering/rooms/${activeRoom.id}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_name: "tanish_dev", message: text }),
+      });
+    } catch {
+      // Offline fallback
+    }
   };
 
   return (

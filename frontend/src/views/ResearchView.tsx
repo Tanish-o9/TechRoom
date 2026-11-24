@@ -8,7 +8,7 @@ import {
 export const ResearchView: React.FC = () => {
   const [topic, setTopic] = useState("Distributed Task Queues & Outbox Pattern");
   const [loading, setLoading] = useState(false);
-  const [report] = useState<{
+  const [report, setReport] = useState<{
     summary: string;
     key_findings: string[];
     comparisons: Array<{ aspect: string; optionA: string; optionB: string }>;
@@ -47,13 +47,25 @@ export const ResearchView: React.FC = () => {
     ],
   });
 
-  const handleSynthesize = (e: React.FormEvent) => {
+  const handleSynthesize = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim()) return;
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/v1/engineering/research/synthesize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReport(data);
+      }
+    } catch {
+      // Keep existing report on error
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
   return (

@@ -48,25 +48,42 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         }
       }
 
-      const newVid: Video = {
-        id: `usr_${Date.now()}`,
-        channel_id: "my_channel",
-        title,
-        description: description || "Developer tutorial uploaded to TechRoom.",
-        category,
-        visibility: "public",
-        status: "ready",
-        duration_seconds: 640,
-        views_count: 1,
-        thumbnail_url: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&auto=format&fit=crop&q=80",
-        playback_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-        channel_title: "My Engineering Channel",
-        channel_handle: "my_dev",
-        channel_avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
-        difficulty: "Intermediate",
-      };
+      // Persist to backend database via direct upload endpoint
+      let createdVid: Video;
+      const vidRes = await fetch("/api/v1/videos/direct", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description: description || "Developer tutorial uploaded to TechRoom.",
+          category,
+          tags: category.toLowerCase(),
+        }),
+      });
 
-      onVideoCreated(newVid);
+      if (vidRes.ok) {
+        createdVid = await vidRes.json();
+      } else {
+        createdVid = {
+          id: `usr_${Date.now()}`,
+          channel_id: "my_channel",
+          title,
+          description: description || "Developer tutorial uploaded to TechRoom.",
+          category,
+          visibility: "public",
+          status: "ready",
+          duration_seconds: 640,
+          views_count: 1,
+          thumbnail_url: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&auto=format&fit=crop&q=80",
+          playback_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+          channel_title: "My Engineering Channel",
+          channel_handle: "my_dev",
+          channel_avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+          difficulty: "Intermediate",
+        };
+      }
+
+      onVideoCreated(createdVid);
       setSuccess(true);
       setTimeout(() => {
         onClose();

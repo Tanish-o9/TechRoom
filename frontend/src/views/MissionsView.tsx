@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Target,
   ArrowRight,
@@ -89,12 +89,31 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
     },
   ]);
 
+  useEffect(() => {
+    fetch("/api/v1/engineering/missions")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setMissions((prev) => {
+            return prev.map((m) => {
+              const remote = data.find((d: any) => d.title === m.title || d.id === m.id);
+              return remote ? { ...m, ...remote, tasks: m.tasks } : m;
+            });
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const activeMission = missions.find((m) => m.id === activeMissionId);
 
   const toggleTask = (taskId: string) => {
     if (!activeMission) return;
+    const task = activeMission.tasks.find((t) => t.id === taskId);
+    const newStatus = !task?.completed;
+
     const updatedTasks = activeMission.tasks.map((t) =>
-      t.id === taskId ? { ...t, completed: !t.completed } : t
+      t.id === taskId ? { ...t, completed: newStatus } : t
     );
     const completedCount = updatedTasks.filter((t) => t.completed).length;
     const newProgress = Math.round((completedCount / updatedTasks.length) * 100);
@@ -106,17 +125,40 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
           : m
       )
     );
+
+    // Persist to backend database
+    fetch(`/api/v1/engineering/missions/${activeMission.id}/tasks/${taskId}/toggle`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completed: newStatus }),
+    }).catch(() => {});
   };
 
-  const handleAskMentor = (e: React.FormEvent) => {
+  const handleAskMentor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!aiMentorMsg.trim()) return;
     const q = aiMentorMsg;
     setAiMentorMsg("");
 
+    setAiMentorLog((prev) => [...prev, { sender: "user", text: q }]);
+
+    try {
+      const res = await fetch(`/api/v1/engineering/missions/${activeMission?.id || "default"}/mentor`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAiMentorLog((prev) => [...prev, { sender: "ai", text: data.answer }]);
+        return;
+      }
+    } catch {
+      // Fallback response if network issue
+    }
+
     setAiMentorLog((prev) => [
       ...prev,
-      { sender: "user", text: q },
       {
         sender: "ai",
         text: `In Raft Milestone 3, ensure the leader only commits log entries from its current term by counting replicas. Applying entries to the state machine must be strictly monotonic to avoid split-brain states.`,

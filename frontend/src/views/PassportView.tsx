@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   ShieldCheck,
   CheckCircle2,
@@ -8,7 +8,7 @@ import {
 import { SkillEvidenceItem } from "../types";
 
 export const PassportView: React.FC = () => {
-  const evidenceList: SkillEvidenceItem[] = [
+  const [evidenceList, setEvidenceList] = useState<SkillEvidenceItem[]>([
     {
       id: "ev_1",
       skill: "Distributed Systems & Consensus",
@@ -41,7 +41,18 @@ export const PassportView: React.FC = () => {
       verified_date: "2026-11-24",
       evidence_type: "Session: Micro-Frontend Module Federation Build-Along",
     },
-  ];
+  ]);
+
+  useEffect(() => {
+    fetch("/api/v1/engineering/passport")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setEvidenceList(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-7 max-w-7xl mx-auto">
