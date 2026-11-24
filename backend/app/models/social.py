@@ -1,6 +1,8 @@
 from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.models.base import BaseModel
+
 
 class Comment(BaseModel):
     """Developer comment on a video, timestamped or general."""

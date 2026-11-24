@@ -1,5 +1,6 @@
 import pytest
 
+
 @pytest.mark.asyncio
 async def test_channel_and_video_lifecycle(client):
     # 1. Register creator

@@ -1,7 +1,10 @@
 from datetime import datetime
-from sqlalchemy import DateTime, Integer, JSON, String
+
+from sqlalchemy import JSON, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.models.base import BaseModel
+
 
 class OutboxEvent(BaseModel):
     """Outbox pattern event table for reliable async task dispatching."""

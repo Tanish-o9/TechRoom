@@ -1,7 +1,9 @@
-from abc import ABC, abstractmethod
-import hmac
 import hashlib
+import hmac
+from abc import ABC, abstractmethod
+
 from app.core.config import settings
+
 
 class VideoProvider(ABC):
     """Abstract interface decoupling platform from Cloudflare Stream or Mux."""
@@ -9,17 +11,14 @@ class VideoProvider(ABC):
     @abstractmethod
     async def generate_direct_upload_url(self, video_id: str, max_duration_seconds: int = 3600) -> dict:
         """Return provider upload URL and provider asset id."""
-        pass
 
     @abstractmethod
     def verify_webhook_signature(self, signature_header: str, body_bytes: bytes) -> bool:
         """Verify authenticity of webhook payload."""
-        pass
 
     @abstractmethod
     def get_playback_url(self, provider_video_id: str) -> str:
         """Return HLS manifest URL."""
-        pass
 
 class MockVideoProvider(VideoProvider):
     """Zero-dependency local/test mock provider."""

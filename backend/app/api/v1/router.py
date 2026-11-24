@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 from app.api.v1.ai import router as ai_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.channels import router as channels_router

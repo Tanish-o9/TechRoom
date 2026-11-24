@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 
+
 class ChannelCreate(BaseModel):
     handle: str = Field(min_length=3, max_length=50, pattern="^[a-zA-Z0-9_-]+$")
     title: str = Field(min_length=2, max_length=150)

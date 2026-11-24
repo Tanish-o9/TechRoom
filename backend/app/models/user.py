@@ -1,6 +1,8 @@
 from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.models.base import BaseModel
+
 
 class User(BaseModel):
     """Platform user model supporting role-based access control."""

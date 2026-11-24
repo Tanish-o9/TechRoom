@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.database import get_db
 from app.models.ai import LLMCall, ScopeCheck, TranscriptChunk, VideoChapter, VideoSummary
 from app.models.video import Video

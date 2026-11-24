@@ -1,9 +1,11 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.security import get_password_hash
 from app.models.ai import ScopeCheck, TranscriptChunk, VideoChapter, VideoSummary
 from app.models.user import User
 from app.models.video import Channel, Video
+
 
 async def seed_initial_data(db: AsyncSession) -> None:
     """Pre-populate TechRoom with rich developer content across all categories."""

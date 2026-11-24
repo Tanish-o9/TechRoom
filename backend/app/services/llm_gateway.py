@@ -2,7 +2,9 @@ import hashlib
 import json
 import time
 from typing import Any
+
 from app.core.config import settings
+
 
 class LLMGateway:
     """Centralized LLM Gateway enforcing budgets, caching, audit metering, and routing."""

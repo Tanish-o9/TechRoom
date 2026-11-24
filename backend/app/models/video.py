@@ -1,6 +1,8 @@
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.models.base import BaseModel
+
 
 class Channel(BaseModel):
     """Creator channel representation."""

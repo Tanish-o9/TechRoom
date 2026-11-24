@@ -1,4 +1,3 @@
-from app.models.ai import ScopeCheck
 from app.services.llm_gateway import llm_gateway
 
 ALLOWED_DOMAINS = {

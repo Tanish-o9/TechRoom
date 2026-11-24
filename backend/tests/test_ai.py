@@ -1,5 +1,7 @@
 import pytest
+
 from app.services.scope_guard import evaluate_scope
+
 
 @pytest.mark.asyncio
 async def test_scope_guard_developer_policy():

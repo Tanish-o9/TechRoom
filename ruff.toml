@@ -1,0 +1,13 @@
+target-version = "py313"
+line-length = 120
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "PIE", "RUF"]
+ignore = [
+    "E501",   # Line length handled gracefully
+    "B008",   # FastAPI Depends() in endpoint function argument defaults is standard
+    "BLE001",  # Blind exception catching in fallback helpers
+]
+
+[lint.isort]
+known-first-party = ["app"]

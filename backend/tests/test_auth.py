@@ -1,5 +1,6 @@
 import pytest
 
+
 @pytest.mark.asyncio
 async def test_auth_lifecycle(client):
     # 1. Register new developer
