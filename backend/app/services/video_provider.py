@@ -33,13 +33,18 @@ class MockVideoProvider(VideoProvider):
         return signature_header == "valid_mock_signature"
 
     def get_playback_url(self, provider_video_id: str) -> str:
-        # High reliability HTML5 video stream for genuine local playback
+        # Authentic, high-reliability computer science video lectures
         streams = [
-            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+            "https://archive.org/download/MIT6.00SCS11/MIT6_00SCS11_lec01_300k.mp4",
+            "https://archive.org/download/MIT6.00SCS11/MIT6_00SCS11_lec02_300k.mp4",
+            "https://archive.org/download/MIT6.00SCS11/MIT6_00SCS11_lec03_300k.mp4",
+            "https://archive.org/download/MIT6.00SCS11/MIT6_00SCS11_lec04_300k.mp4",
+            "https://archive.org/download/MIT6.00SCS11/MIT6_00SCS11_lec05_300k.mp4",
+            "https://archive.org/download/MIT6.00SCS11/MIT6_00SCS11_lec06_300k.mp4",
+            "https://archive.org/download/MIT6.00SCS11/MIT6_00SCS11_lec07_300k.mp4",
+            "https://archive.org/download/MIT6.00SCS11/MIT6_00SCS11_lec08_300k.mp4",
         ]
-        # Hash provider_video_id to deterministically select a sample
+        # Hash provider_video_id to deterministically select an authentic engineering lecture stream
         idx = abs(hash(provider_video_id)) % len(streams)
         return streams[idx]
 

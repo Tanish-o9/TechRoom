@@ -75,7 +75,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           duration_seconds: 640,
           views_count: 1,
           thumbnail_url: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&auto=format&fit=crop&q=80",
-          playback_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+          playback_url: "https://archive.org/download/MIT6.00SCS11/MIT6_00SCS11_lec01_300k.mp4",
           channel_title: "My Engineering Channel",
           channel_handle: "my_dev",
           channel_avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",

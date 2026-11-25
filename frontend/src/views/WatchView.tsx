@@ -251,7 +251,7 @@ export const WatchView: React.FC<WatchViewProps> = ({
               onTimeUpdate={(e) => onTimeUpdate((e.target as HTMLVideoElement).currentTime)}
               src={
                 video.playback_url ||
-                "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                "https://archive.org/download/MIT6.00SCS11/MIT6_00SCS11_lec01_300k.mp4"
               }
               className="w-full h-full object-contain bg-black"
             />
