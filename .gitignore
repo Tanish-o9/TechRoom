@@ -4,6 +4,10 @@
 !.env.example
 *.local
 
+# Generated Guides & Exported PDFs
+TechRoom_Architecture_and_Engineering_Guide.*
+*.pdf
+
 # Python
 __pycache__/
 *.py[cod]
