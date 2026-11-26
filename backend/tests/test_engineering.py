@@ -139,3 +139,15 @@ async def test_scope_check_and_direct_video(client):
     )
     assert vid.status_code == 201
     assert vid.json()["title"] == "Zero-Copy Linux Networking with eBPF and XDP"
+
+
+@pytest.mark.asyncio
+async def test_execute_snippet_endpoint(client):
+    res = await client.post(
+        "/api/v1/engineering/execute-snippet",
+        json={"code": "print('HELLO_TECHROOM')"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["success"] is True
+    assert "HELLO_TECHROOM" in data["stdout"]

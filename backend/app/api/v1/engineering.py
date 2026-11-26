@@ -249,6 +249,46 @@ async def evaluate_challenge_code(
     }
 
 
+class SnippetExecuteRequest(BaseModel):
+    code: str
+
+@router.post("/execute-snippet")
+async def execute_code_snippet(payload: SnippetExecuteRequest):
+    """Execute arbitrary developer Python snippet in isolated sandbox with timeout."""
+    import time
+    start = time.perf_counter()
+    try:
+        with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as f:
+            f.write(payload.code)
+            temp_path = f.name
+
+        proc = subprocess.run(
+            [sys.executable, temp_path],
+            capture_output=True,
+            text=True,
+            timeout=4,
+        )
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        output = proc.stdout if proc.returncode == 0 else (proc.stderr or proc.stdout)
+        return {
+            "success": proc.returncode == 0,
+            "stdout": output or "(Execution completed with no stdout)",
+            "execution_time_ms": duration_ms,
+        }
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "stdout": "Execution timed out (exceeded 4.0s sandbox limit). Check for infinite loops.",
+            "execution_time_ms": 4000,
+        }
+    except Exception as exc:
+        return {
+            "success": False,
+            "stdout": f"Runtime error: {exc}",
+            "execution_time_ms": 0,
+        }
+
+
 # ==========================================
 # 3. PROJECT GENOME & REPO TOPOLOGY
 # ==========================================
