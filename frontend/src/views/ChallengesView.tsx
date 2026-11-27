@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Swords,
   Play,
@@ -10,7 +10,7 @@ import {
 import { Challenge } from "../types";
 
 export const ChallengesView: React.FC = () => {
-  const [challenges] = useState<Challenge[]>([
+  const [challenges, setChallenges] = useState<Challenge[]>([
     {
       id: "c_race",
       title: "Fix Token Bucket Race Condition Under Parallel Goroutines",
@@ -80,6 +80,33 @@ async def dispatch_worker(payload: dict):
     score: 0,
     log: "Ready. Inspect the broken implementation and click 'Run Test Cases'.",
   });
+
+  useEffect(() => {
+    fetch("/api/v1/engineering/challenges")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped: Challenge[] = data.map((d: any) => ({
+            id: d.id,
+            title: d.title,
+            category: d.category,
+            difficulty: d.difficulty,
+            language: d.language || "python",
+            description: d.description,
+            broken_code: d.broken_code,
+            solution_code: d.solution_code || "",
+            test_cases: (d.test_cases || []).map((tc: any) => ({
+              input: tc.description || tc.test || "Assertion",
+              expected: "assert True",
+            })),
+          }));
+          setChallenges(mapped);
+          setActiveChallenge(mapped[0]);
+          setEditorCode(mapped[0].broken_code);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSelectChallenge = (c: Challenge) => {
     setActiveChallenge(c);

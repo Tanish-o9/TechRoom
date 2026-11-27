@@ -403,7 +403,30 @@ async def seed_initial_data(db: AsyncSession) -> None:
                 },
             ],
         )
-        db.add_all([m1, m2])
+        m3 = Mission(
+            title="Zero-Downtime Blue/Green Kubernetes Operator",
+            domain="DevOps",
+            difficulty="Intermediate",
+            description="Build a production Kubernetes custom controller that reconciles CanaryDeployments, automates traffic shifting with Traefik/Ingress, and executes automatic rollback on 5xx error spikes.",
+            estimated_hours=8,
+            stages=[
+                {
+                    "name": "Milestone 1: CRD & Controller Scaffolding",
+                    "tasks": [
+                        {"id": "t13", "title": "Define Custom Resource Definition (CanaryDeployment)", "completed": True},
+                        {"id": "t14", "title": "Reconciliation Loop for Pod Readiness and Health Probes", "completed": False},
+                    ],
+                },
+                {
+                    "name": "Milestone 2: Traefik Ingress Traffic Splitting",
+                    "tasks": [
+                        {"id": "t15", "title": "Dynamic Weight Ingress Traffic Splitting (90/10 Canary)", "completed": False},
+                        {"id": "t16", "title": "Automated Metric-Driven Rollback on Error Spikes", "completed": False},
+                    ],
+                },
+            ],
+        )
+        db.add_all([m1, m2, m3])
 
     # 5. Seed Engineering Challenges (Break My Code)
     has_challenge = (await db.execute(select(Challenge))).scalars().first()
@@ -430,7 +453,32 @@ async def seed_initial_data(db: AsyncSession) -> None:
                 "    return len(active) >= max_reqs\n"
             ),
         )
-        db.add(c1)
+        c2 = Challenge(
+            title="Asyncio Task Cancellation Resource Leak",
+            category="Concurrency",
+            difficulty="Hard",
+            language="python",
+            description="Ensure that cancelled asyncio tasks correctly release database connection locks and do not leave hanging zombie sockets in the connection pool.",
+            broken_code=(
+                "import asyncio\n\n"
+                "async def acquire_and_execute(lock: asyncio.Lock, query: str) -> str:\n"
+                "    await lock.acquire()\n"
+                "    await asyncio.sleep(0.1)\n"
+                "    lock.release()\n"
+                "    return 'executed'\n"
+            ),
+            test_cases=[
+                {"test": "'async with' in solution_code or 'finally:' in solution_code", "description": "Guarantees lock release in finally or async context manager"},
+            ],
+            solution_code=(
+                "import asyncio\n\n"
+                "async def acquire_and_execute(lock: asyncio.Lock, query: str) -> str:\n"
+                "    async with lock:\n"
+                "        await asyncio.sleep(0.1)\n"
+                "        return 'executed'\n"
+            ),
+        )
+        db.add_all([c1, c2])
 
     # 6. Seed Projects & Live Collaborative Rooms
     has_room = (await db.execute(select(EngineeringRoom))).scalars().first()
@@ -467,7 +515,23 @@ async def seed_initial_data(db: AsyncSession) -> None:
             tech_stack=["FastAPI", "PostgreSQL", "Redis", "Celery", "React", "TypeScript"],
             architecture_map={"layers": ["ingress", "service", "cache", "database", "worker"]},
         )
-        db.add(p1)
+        p2 = Project(
+            user_id=uid,
+            name="nexus-edge-gateway",
+            repo_url="https://github.com/Tanish-o9/nexus-edge-gateway",
+            description="High-throughput reverse proxy with eBPF metrics and distributed token bucket rate limiting.",
+            tech_stack=["Rust", "Tokio", "eBPF", "Redis"],
+            architecture_map={"layers": ["proxy_core", "rate_limiter", "metrics_ebpf"]},
+        )
+        p3 = Project(
+            user_id=uid,
+            name="stream-analytics-olap",
+            repo_url="https://github.com/Tanish-o9/stream-analytics-olap",
+            description="Event streaming ingestion pipeline targeting ClickHouse with sub-second aggregate views.",
+            tech_stack=["Python", "ClickHouse", "FastAPI", "Kafka"],
+            architecture_map={"layers": ["kafka_consumer", "batch_writer", "clickhouse_engine"]},
+        )
+        db.add_all([p1, p2, p3])
 
         # 7. Seed Skill Evidence
         ev1 = SkillEvidence(
@@ -491,6 +555,28 @@ async def seed_initial_data(db: AsyncSession) -> None:
             score=89,
             evidence_type="Challenge: Celery Transactional Outbox Pattern",
         )
+        ev4 = SkillEvidence(
+            user_id="default_dev_user",
+            skill_name="Distributed Systems & Consensus",
+            level="Expert",
+            score=96,
+            evidence_type="Mission: Distributed Raft Consensus Engine (Quorum Proof)",
+        )
+        ev5 = SkillEvidence(
+            user_id="default_dev_user",
+            skill_name="High-Throughput PostgreSQL Indexing",
+            level="Advanced",
+            score=92,
+            evidence_type="Challenge: EXPLAIN ANALYZE B-Tree/GIN Tuning",
+        )
+        ev6 = SkillEvidence(
+            user_id="default_dev_user",
+            skill_name="React 19 Architecture & Server Components",
+            level="Advanced",
+            score=94,
+            evidence_type="Session: High-Throughput Micro-Frontends",
+        )
+        db.add_all([ev1, ev2, ev3, ev4, ev5, ev6])
         mem1 = PersonalMemory(
             user_id=uid,
             title="Raft Log Compaction Invariants",

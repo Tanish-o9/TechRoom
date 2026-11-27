@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Users,
   Send,
@@ -8,7 +8,7 @@ import {
 import { EngineeringRoomItem } from "../types";
 
 export const RoomsView: React.FC = () => {
-  const [rooms] = useState<EngineeringRoomItem[]>([
+  const [rooms, setRooms] = useState<EngineeringRoomItem[]>([
     {
       id: "room_1",
       title: "Raft Log Compaction & Snapshotting Working Group",
@@ -37,6 +37,28 @@ export const RoomsView: React.FC = () => {
     { user: "kelsey_h", text: "Agreed. When receiving an InstallSnapshot RPC, we must discard conflicting log entries." },
   ]);
   const [msgInput, setMsgInput] = useState("");
+
+  useEffect(() => {
+    fetch("/api/v1/engineering/rooms")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped: EngineeringRoomItem[] = data.map((d: any, idx: number) => ({
+            id: d.id,
+            title: d.title,
+            topic: d.topic,
+            host: d.host || (idx === 0 ? "alex_xu" : "tiangolo"),
+            participants_count: 12 + idx * 6,
+            is_live: d.is_live,
+            shared_code: d.shared_code,
+            shared_notes: d.shared_notes,
+          }));
+          setRooms(mapped);
+          setActiveRoom(mapped[0]);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault();

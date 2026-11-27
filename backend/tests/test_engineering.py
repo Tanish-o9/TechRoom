@@ -151,3 +151,18 @@ async def test_execute_snippet_endpoint(client):
     data = res.json()
     assert data["success"] is True
     assert "HELLO_TECHROOM" in data["stdout"]
+
+
+@pytest.mark.asyncio
+async def test_stats_and_passport_endpoints(client):
+    stats_res = await client.get("/api/v1/engineering/stats")
+    assert stats_res.status_code == 200
+    stats = stats_res.json()
+    assert "active_missions_count" in stats
+    assert "verified_xp" in stats
+
+    pass_res = await client.get("/api/v1/engineering/passport")
+    assert pass_res.status_code == 200
+    evidence = pass_res.json()
+    assert isinstance(evidence, list)
+

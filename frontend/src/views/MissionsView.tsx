@@ -94,12 +94,28 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
-          setMissions((prev) => {
-            return prev.map((m) => {
-              const remote = data.find((d: any) => d.title === m.title || d.id === m.id);
-              return remote ? { ...m, ...remote, tasks: m.tasks } : m;
-            });
+          const formatted: Mission[] = data.map((d: any, idx: number) => {
+            const tasks = (d.stages || []).flatMap((s: any) => s.tasks || []);
+            const completedCount = tasks.filter((t: any) => t.completed).length;
+            const progress = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : (idx === 0 ? 65 : 30);
+            return {
+              id: d.id,
+              title: d.title,
+              domain: d.domain,
+              difficulty: d.difficulty,
+              description: d.description,
+              estimated_hours: d.estimated_hours || 10,
+              progress_percent: progress,
+              current_milestone: d.stages?.[0]?.name || "Milestone 1: Foundations",
+              skills: [d.domain, "Architecture", "Production Ready"],
+              tasks: tasks.length > 0 ? tasks : [
+                { id: `t_${idx}_1`, title: "Architecture & Interface Design", completed: true },
+                { id: `t_${idx}_2`, title: "Core State Machine Engine", completed: false },
+                { id: `t_${idx}_3`, title: "Verification Assertions & Benchmarks", completed: false },
+              ],
+            };
           });
+          setMissions(formatted);
         }
       })
       .catch(() => {});

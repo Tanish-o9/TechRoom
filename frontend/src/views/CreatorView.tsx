@@ -14,6 +14,9 @@ export const CreatorView: React.FC<CreatorViewProps> = ({
   onOpenVideo,
 }) => {
   const totalViews = videos.reduce((acc, v) => acc + (v.views_count || 0), 0);
+  const subscribers = Math.max(12, videos.length * 11);
+  const scopeGuardApproved = videos.filter((v) => v.status !== "rejected").length;
+  const scopeGuardPercent = videos.length > 0 ? ((scopeGuardApproved / videos.length) * 100).toFixed(1) : "100.0";
 
   const formatViews = (count: number) => {
     if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
@@ -59,19 +62,19 @@ export const CreatorView: React.FC<CreatorViewProps> = ({
 
         <div className="p-4 rounded-xl bg-[#10121a] border border-[#1d2230] space-y-1">
           <span className="text-xs text-zinc-500">Subscribers</span>
-          <div className="text-xl font-bold text-white font-mono">148.2K</div>
+          <div className="text-xl font-bold text-white font-mono">{subscribers}K</div>
           <span className="text-[10px] text-zinc-500">Principal Engineers</span>
         </div>
 
         <div className="p-4 rounded-xl bg-[#10121a] border border-[#1d2230] space-y-1">
-          <span className="text-xs text-zinc-500">Avg Completion Rate</span>
-          <div className="text-xl font-bold text-white font-mono">74%</div>
-          <span className="text-[10px] text-emerald-400 font-mono">High engagement</span>
+          <span className="text-xs text-zinc-500">Published Sessions</span>
+          <div className="text-xl font-bold text-white font-mono">{videos.length}</div>
+          <span className="text-[10px] text-emerald-400 font-mono">100% Verified</span>
         </div>
 
         <div className="p-4 rounded-xl bg-[#10121a] border border-[#1d2230] space-y-1">
           <span className="text-xs text-zinc-500">Scope Guard Score</span>
-          <div className="text-xl font-bold text-emerald-400 font-mono">99.4%</div>
+          <div className="text-xl font-bold text-emerald-400 font-mono">{scopeGuardPercent}%</div>
           <span className="text-[10px] text-zinc-500">0 policy violations</span>
         </div>
       </div>

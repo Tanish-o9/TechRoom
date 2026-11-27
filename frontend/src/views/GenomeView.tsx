@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Cpu, Layers, ArrowRight, Server, Database } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Cpu, Layers, ArrowRight, Server, Database, FolderGit2 } from "lucide-react";
 
 interface ArchNode {
   id: string;
@@ -11,8 +11,8 @@ interface ArchNode {
   description: string;
 }
 
-export const GenomeView: React.FC = () => {
-  const [nodes] = useState<ArchNode[]>([
+const DEFAULT_NODES: Record<string, ArchNode[]> = {
+  default: [
     {
       id: "n_edge",
       label: "Envoy Edge Gateway",
@@ -58,9 +58,82 @@ export const GenomeView: React.FC = () => {
       latency: "0.4ms",
       description: "Sub-millisecond distributed cache and idempotency locking layer.",
     },
-  ]);
+  ],
+  nexus: [
+    {
+      id: "nx_1",
+      label: "Tokio Async I/O Loop",
+      type: "Gateway",
+      status: "optimized",
+      throughput: "140K conn/s",
+      latency: "0.3ms",
+      description: "Epoll/kqueue non-blocking event multiplexer handling TLS termination and stream dispatch.",
+    },
+    {
+      id: "nx_2",
+      label: "eBPF Packet Inspector",
+      type: "Service",
+      status: "optimized",
+      throughput: "500K pkts/s",
+      latency: "0.1ms",
+      description: "Kernel-level XDP bypass for DDoS mitigation and L4 connection telemetry.",
+    },
+    {
+      id: "nx_3",
+      label: "Distributed Token Bucket Engine",
+      type: "Cache",
+      status: "healthy",
+      throughput: "95K evals/s",
+      latency: "0.6ms",
+      description: "Redis sliding window Lua script for per-client token replenishment and bursting.",
+    },
+  ],
+  stream: [
+    {
+      id: "st_1",
+      label: "Kafka Partition Consumer",
+      type: "Gateway",
+      status: "healthy",
+      throughput: "45K msgs/s",
+      latency: "4.2ms",
+      description: "High-throughput parallel partition group consuming telemetry and analytics events.",
+    },
+    {
+      id: "st_2",
+      label: "ClickHouse Ingestion Engine",
+      type: "Database",
+      status: "optimized",
+      throughput: "120K rows/s",
+      latency: "1.8ms",
+      description: "Columnar storage engine with MergeTree table partitioning and sub-second aggregate views.",
+    },
+  ],
+};
 
-  const [selectedNode, setSelectedNode] = useState<ArchNode>(nodes[0]);
+export const GenomeView: React.FC = () => {
+  const [projects, setProjects] = useState<any[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("default");
+  const [nodes, setNodes] = useState<ArchNode[]>(DEFAULT_NODES.default);
+  const [selectedNode, setSelectedNode] = useState<ArchNode>(DEFAULT_NODES.default[0]);
+
+  useEffect(() => {
+    fetch("/api/v1/engineering/projects")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setProjects(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSelectProject = (proj: any) => {
+    setSelectedProjectId(proj.id);
+    const key = proj.name.includes("nexus") ? "nexus" : proj.name.includes("stream") ? "stream" : "default";
+    const newNodes = DEFAULT_NODES[key] || DEFAULT_NODES.default;
+    setNodes(newNodes);
+    setSelectedNode(newNodes[0]);
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-7 max-w-7xl mx-auto">
@@ -75,6 +148,30 @@ export const GenomeView: React.FC = () => {
         </p>
       </div>
 
+      {/* Project Selector Bar */}
+      {projects.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-[#1c2130]">
+          <span className="text-xs font-mono text-zinc-500 pr-2">Project:</span>
+          {projects.map((p) => {
+            const isCurrent = selectedProjectId === p.id || (selectedProjectId === "default" && p.name.includes("TechRoom"));
+            return (
+              <button
+                key={p.id}
+                onClick={() => handleSelectProject(p)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                  isCurrent
+                    ? "bg-blue-600 text-white font-semibold shadow-sm"
+                    : "bg-[#121520] hover:bg-[#1a1f2e] text-zinc-300 border border-[#212738]"
+                }`}
+              >
+                <FolderGit2 className="w-3.5 h-3.5" />
+                <span>{p.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Overview Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <div className="p-4 rounded-xl bg-[#10121a] border border-[#1d2230] space-y-1">
@@ -84,13 +181,15 @@ export const GenomeView: React.FC = () => {
         </div>
         <div className="p-4 rounded-xl bg-[#10121a] border border-[#1d2230] space-y-1">
           <span className="text-xs text-zinc-500">P99 System Latency</span>
-          <div className="text-xl font-bold text-white font-mono">8.4ms</div>
+          <div className="text-xl font-bold text-white font-mono">
+            {selectedNode.latency}
+          </div>
           <span className="text-[10px] text-emerald-400 font-mono">Within SLA (15ms)</span>
         </div>
         <div className="p-4 rounded-xl bg-[#10121a] border border-[#1d2230] space-y-1">
-          <span className="text-xs text-zinc-500">Live Active Nodes</span>
-          <div className="text-xl font-bold text-white font-mono">5 Modules</div>
-          <span className="text-[10px] text-zinc-500">All replicated</span>
+          <span className="text-xs text-zinc-500">Active Architecture Nodes</span>
+          <div className="text-xl font-bold text-white font-mono">{nodes.length} Modules</div>
+          <span className="text-[10px] text-zinc-500">All replicated & verified</span>
         </div>
         <div className="p-4 rounded-xl bg-[#10121a] border border-[#1d2230] space-y-1">
           <span className="text-xs text-zinc-500">Code Boundaries</span>

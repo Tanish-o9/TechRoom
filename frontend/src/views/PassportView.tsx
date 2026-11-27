@@ -8,48 +8,28 @@ import {
 import { SkillEvidenceItem } from "../types";
 
 export const PassportView: React.FC = () => {
-  const [evidenceList, setEvidenceList] = useState<SkillEvidenceItem[]>([
-    {
-      id: "ev_1",
-      skill: "Distributed Systems & Consensus",
-      level: "Expert",
-      score: 96,
-      verified_date: "2026-11-20",
-      evidence_type: "Mission: Distributed Raft Consensus Engine (Quorum Proof)",
-    },
-    {
-      id: "ev_2",
-      skill: "High-Throughput PostgreSQL Indexing",
-      level: "Advanced",
-      score: 92,
-      verified_date: "2026-11-18",
-      evidence_type: "Challenge: EXPLAIN ANALYZE B-Tree/GIN Tuning",
-    },
-    {
-      id: "ev_3",
-      skill: "Concurrency & Atomic State Locking",
-      level: "Proficient",
-      score: 88,
-      verified_date: "2026-11-23",
-      evidence_type: "Battle Arena: Token Bucket Parallel Race Condition Fix",
-    },
-    {
-      id: "ev_4",
-      skill: "React 19 Server Components & Actions",
-      level: "Advanced",
-      score: 94,
-      verified_date: "2026-11-24",
-      evidence_type: "Session: Micro-Frontend Module Federation Build-Along",
-    },
-  ]);
+  const [evidenceList, setEvidenceList] = useState<SkillEvidenceItem[]>([]);
+  const [stats, setStats] = useState<any>({
+    username: "tanish_dev",
+    role: "Staff Engineer Track",
+    level: 4,
+    verified_xp: 920,
+  });
 
   useEffect(() => {
     fetch("/api/v1/engineering/passport")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           setEvidenceList(data);
         }
+      })
+      .catch(() => {});
+
+    fetch("/api/v1/engineering/stats")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setStats(data);
       })
       .catch(() => {});
   }, []);
@@ -64,9 +44,9 @@ export const PassportView: React.FC = () => {
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-white">tanish_dev</h1>
+              <h1 className="text-xl font-bold text-white">{stats.username}</h1>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                Staff Engineer Track
+                {stats.role || "Staff Engineer Track"}
               </span>
             </div>
             <p className="text-xs text-zinc-400">
@@ -77,15 +57,15 @@ export const PassportView: React.FC = () => {
 
         <div className="flex items-center gap-4 text-xs font-mono">
           <div className="p-3 rounded-lg bg-[#141724] border border-[#22283a] text-center">
-            <div className="text-base font-bold text-white">Level 4</div>
+            <div className="text-base font-bold text-white">Level {stats.level || 4}</div>
             <span className="text-zinc-500 text-[10px]">Rank</span>
           </div>
           <div className="p-3 rounded-lg bg-[#141724] border border-[#22283a] text-center">
-            <div className="text-base font-bold text-emerald-400">920 XP</div>
+            <div className="text-base font-bold text-emerald-400">{stats.verified_xp || 920} XP</div>
             <span className="text-zinc-500 text-[10px]">Total XP</span>
           </div>
           <div className="p-3 rounded-lg bg-[#141724] border border-[#22283a] text-center">
-            <div className="text-base font-bold text-blue-400">4 Verified</div>
+            <div className="text-base font-bold text-blue-400">{evidenceList.length} Verified</div>
             <span className="text-zinc-500 text-[10px]">Credentials</span>
           </div>
         </div>
